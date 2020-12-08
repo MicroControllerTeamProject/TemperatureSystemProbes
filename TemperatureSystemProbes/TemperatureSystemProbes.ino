@@ -32,17 +32,17 @@ DallasTemperature sensors(&oneWire);
 
 //uint8_t _temperatureSensorAddress[50][8];
 
-auto _temperatureSensorAddress = new uint8_t[1][8];
+//Da determinare su lettura eeprom per array dinamico
+auto _temperatureSensorAddress = new uint8_t[0][8];
 
+uint8_t _numberOfTemperatureSensor = 0;
 
-uint8_t _numbersOfSensor;
 #include "LSGEEpromRW.h" 
 #include <EEPROM.h> 
 /*-----( Declare Variables )-----*/
 // Assign the addresses of your 1-Wire temp sensors.
 // See the tutorial on how to obtain these addresses:
 // http://www.hacktronics.com/Tutorials/arduino-1-wire-address-finder.html
-
 
 //byte checkProbeAddressInMemory(byte numberOfSensor)
 //{
@@ -86,23 +86,21 @@ unsigned int getSubtring(int start, int end, String stringToSplit)
 void setup()   /****** SETUP: RUNS ONCE ******/
 {
 	Serial.begin(115200);
+
 	_softwareSerial->begin(9600);
 
 	Serial.print("Initializing Temperature Control Library Version ");
+
 	Serial.println(DALLASTEMPLIBVERSION);
 
-	//_temperatureSensorAddress = new uint8_t[_numbersOfSensor][8];
+	getOnlyDeviceNumber();
+
+	_temperatureSensorAddress = new uint8_t[_numberOfTemperatureSensor][8];
 
 	discoverOneWireDevices();
-	//return;
-	// Initialize the Temperature measurement library
+
 	sensors.begin();
 
-	_numbersOfSensor = sensors.getDeviceCount();
-
-	Serial.print("Number of Devices found on bus = ");
-
-	Serial.println(_numbersOfSensor);
 	
 	// set the resolution to 10 bit (Can be 9 to 12 bits .. lower is faster)
 	//registerProbeAddressInMemory();
@@ -114,9 +112,8 @@ void setup()   /****** SETUP: RUNS ONCE ******/
 }
 void loop()   /****** LOOP: RUNS CONSTANTLY ******/
 {
-
 	//return;
-	for (int i = 0; i < _numbersOfSensor; i++)
+	for (int i = 0; i < _numberOfTemperatureSensor; i++)
 	{
 		DeviceAddress probe = { _temperatureSensorAddress[i][0],
 								_temperatureSensorAddress[i][1],
@@ -157,11 +154,12 @@ void printTemperature(DeviceAddress deviceAddress)
 		Serial.print(DallasTemperature::toFahrenheit(tempC));*/
 	}
 }
-void discoverOneWireDevices(void) {
+
+void getOnlyDeviceNumber(void) {
 	byte addr[8];
 	char probeAddressHexValue[5];
 	char value[5];
-	uint8_t numberOfTemperatureSensor = 0;
+	_numberOfTemperatureSensor = 0;
 	while (oneWire.search(addr)) {
 		for (byte i = 0; i < 8; i++) {
 			strcpy(probeAddressHexValue, "0x");
@@ -170,14 +168,45 @@ void discoverOneWireDevices(void) {
 			}
 			String(addr[i], HEX).toCharArray(value, 5);
 			strcat(probeAddressHexValue, value);
-			_temperatureSensorAddress[numberOfTemperatureSensor][i] = getHex(probeAddressHexValue);
+			if (i < 7) {
+				Serial.print(", ");
+			}
+			else
+			{
+				_numberOfTemperatureSensor++;
+				Serial.println();
+			}
+		}
+		if (OneWire::crc8(addr, 7) != addr[7]) {
+			Serial.print("CRC is not valid!\n");
+			return;
+		}
+	}
+	oneWire.reset_search();
+	return;
+}
+
+void discoverOneWireDevices(void) {
+	byte addr[8];
+	char probeAddressHexValue[5];
+	char value[5];
+	_numberOfTemperatureSensor = 0;
+	while (oneWire.search(addr)) {
+		for (byte i = 0; i < 8; i++) {
+			strcpy(probeAddressHexValue, "0x");
+			if (addr[i] < 16) {
+				strcat(probeAddressHexValue, "0");
+			}
+			String(addr[i], HEX).toCharArray(value, 5);
+			strcat(probeAddressHexValue, value);
+			_temperatureSensorAddress[_numberOfTemperatureSensor][i] = getHex(probeAddressHexValue);
 			Serial.print(probeAddressHexValue);
 			if (i < 7) {
 				Serial.print(", ");
 			}
 			else
 			{
-				numberOfTemperatureSensor++;
+				_numberOfTemperatureSensor++;
 				Serial.println();
 			}
 		}

@@ -161,22 +161,7 @@ void getOnlyDeviceNumber(void) {
 	char value[5];
 	_numberOfTemperatureSensor = 0;
 	while (oneWire.search(addr)) {
-		for (byte i = 0; i < 8; i++) {
-			strcpy(probeAddressHexValue, "0x");
-			if (addr[i] < 16) {
-				strcat(probeAddressHexValue, "0");
-			}
-			String(addr[i], HEX).toCharArray(value, 5);
-			strcat(probeAddressHexValue, value);
-			if (i < 7) {
-				Serial.print(", ");
-			}
-			else
-			{
-				_numberOfTemperatureSensor++;
-				Serial.println();
-			}
-		}
+		_numberOfTemperatureSensor++;
 		if (OneWire::crc8(addr, 7) != addr[7]) {
 			Serial.print("CRC is not valid!\n");
 			return;
@@ -218,6 +203,7 @@ void discoverOneWireDevices(void) {
 	oneWire.reset_search();
 	return;
 }
+
 void recognizeProbeDevice(uint8_t deviceNumber) {
 
 }
